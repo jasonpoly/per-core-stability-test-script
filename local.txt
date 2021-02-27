@@ -1,0 +1,5 @@
+NumCPUs=1
+CpuNumHyperthreads=1
+CpuSupportsAVX=0
+CpuSupportsAVX2=0
+CpuSupportsAVX512F=0

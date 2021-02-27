@@ -1,0 +1,6 @@
+StressTester=1
+UsePrimenet=0
+MinTortureFFT=84
+MaxTortureFFT=84
+TortureMem=8
+TortureTime=3
