@@ -33,6 +33,10 @@ $loops=3;                 # Default=3. Number of times to loop around all cores.
 $cycle_time=180;          # Default=180.  Approx time in s to run on each core.  
 $cooldown=15;             # Default=15.  Time in s to cool down between testing each core.  
 
+$core_jumping_test=$true;      # Default=$true.  Test to move process from core to core.  Set to $falue to disable.
+$core_jumping_loops=5;         # Default=5. Number of loops to run.
+$core_jumping_cycle_time=10;   # Default=10.  Approx time in s to run on each core.  
+
 # adjust next two values to limit testing to a specific range of cores
 $first_core=0;   # First core to test in each loop.  Default=0.  Any cores lower than this number will not be tested.
 $last_core=31;   # Last core to test in each loop.  Any cores (that exist) higher than this number will not be tested.
@@ -41,8 +45,10 @@ $last_core=31;   # Last core to test in each loop.  Any cores (that exist) highe
 
 # additional settings
 $stop_on_error=$false; # Default=$false.  $true will stop if an error is found, otherwise skip to the next core. 
-$timestep=10;          # Minimum time to run stress test.  Will check for errors every this many seconds.
+$timestep=1;           # Minimum time to run stress test.  Will check for errors every this many seconds.
 $use_smt=$true;        # Default=$true.  $false will only enable one thread on each physical core even if SMT (Hyperthreading) is enabled on the system.
+
+$fatal_error=$false;   # Default=$false.  Script sets this to true if there is an unrecoverable error.  Any subsequent tests will then be skipped.
 
 # After extracting, we will add the following lines to local.txt for single thread, non-AVX test
 #     NumCPUs=1
@@ -85,13 +91,12 @@ function Clean-p95-Results ($test)
     Write-Log "Moving any previous results into ${test}.prev.results\"
     if (Test-Path "$work_dir\${test}.core*failure.txt")
     {
-        rmdir "$work_dir\${test}.prev.results" -Recurse -Force -ErrorAction SilentlyContinue        
         mkdir "$work_dir\${test}.prev.results" -ErrorAction SilentlyContinue
-        mv "$work_dir\${test}.core*_failure.txt" "$work_dir\${test}.prev.results"
+        mv -Force "$work_dir\${test}.core*_failure.txt" "$work_dir\${test}.prev.results"
     }
     if (Test-Path "$work_dir\p95\results.txt")
     {
-        mv "$work_dir\p95\results.txt" "$work_dir\p95\prev.results.txt"
+        mv -Force "$work_dir\p95\results.txt" "$work_dir\p95\prev.results.txt"
     }
 }
 
@@ -144,24 +149,14 @@ function Set-Affinity
     }
 }
 
-function Wait-prime95
+function p95-Error
 {
     param (
-        [Parameter(Mandatory=$true)]$CPUCore, 
-        [Parameter(Mandatory=$true)]$WaitTime,
+        [Parameter()]$p95result, 
+        [Parameter(Mandatory=$true)]$process,
+        [Parameter(Mandatory=$true)]$CPUCore,
         [Parameter(Mandatory=$true)]$Loop
     )
-
-    # wait for p95 to run for $cycle_time, as long as there is no error, and no failure in a previous loop
-    $runtime=0
-    $p95result=""
-    $starttime=(GET-DATE)
-    while ( ($runtime -lt $WaitTime) -and (-not($p95result)) -and ((Test-Path "$work_dir\core${CPUCore}_loop*_failure.txt") -eq $false) -and ($process.HasExited -eq $false) )
-    {
-        Start-Sleep -Seconds $timestep
-        $p95result = if (Test-Path "$work_dir\p95\results.txt") {Select-String "$work_dir\p95\results.txt" -Pattern ERROR}
-        $runtime = (NEW-TIMESPAN –Start $starttime –End (GET-DATE)).TotalSeconds
-    }
 
     if ($p95result)
     {
@@ -201,9 +196,59 @@ function Wait-prime95
             Wait-Event 
         }
     }
+}
+
+
+function Wait-prime95
+{
+    param (
+        [Parameter(Mandatory=$true)]$CPUCore, 
+        [Parameter(Mandatory=$true)]$WaitTime,
+        [Parameter(Mandatory=$true)]$Loop
+    )
+
+    # wait for p95 to run for $cycle_time, as long as there is no error, and no failure in a previous loop
+    $runtime=0
+    $p95result=""
+    $starttime=(GET-DATE)
+    while ( ($runtime -lt $WaitTime) -and (-not($p95result)) -and ((Test-Path "$work_dir\core${CPUCore}_loop*_failure.txt") -eq $false) -and ($process.HasExited -eq $false) )
+    {
+        Start-Sleep -Seconds $timestep
+        $p95result = if (Test-Path "$work_dir\p95\results.txt") {Select-String "$work_dir\p95\results.txt" -Pattern ERROR}
+        $runtime = (NEW-TIMESPAN –Start $starttime –End (GET-DATE)).TotalSeconds
+    }
+
+    if ($p95result)
+    {
+        p95-Error -p95result $p95result.Line -process $process -CPUCore $CPUCore -Loop $Loop
+    }
+    elseif ($process.HasExited -ne $false)
+    {
+        p95-Error -p95result $p95result.Line -process $process -CPUCore $CPUCore -Loop $Loop
+    }
     else
     {
         Write-Log "Test passed on core $CPUCore."            
+    }
+}
+
+
+function Exit-Process
+{
+    param (
+        [Parameter(Mandatory=$true)]$Process, 
+        [Parameter(Mandatory=$true)]$ProcessName
+    )
+
+    if ( ($Process -ne 0) -and ($Process.HasExited -eq $false) )
+    {
+        if ($Process.CloseMainWindow() -eq $fales)
+        {
+            $Process.Kill()
+        }
+        Write-Log "Waiting for $ProcessName to close"
+        Wait-Process -Id $Process.Id -ErrorAction SilentlyContinue
+        $Process.Close()
     }
 }
 
@@ -301,7 +346,7 @@ if ( ($fatal_error -eq $false) -and ($core_loop_test -eq $true) )
         for ($core=$first_core; $core -le $last_core; $core++)
         {
             # skip testing if this core already failied in an earlier loop
-            if (Test-Path "$work_dir\${test}.core${core}_loop*_failure.txt")
+            if (Test-Path "$work_dir\*.core${core}_loop*_failure.txt")
             {
                 Write-Log "!!!! ============================================= !!!!"
                 Write-Log "!!!! Skipping core ${core} due to previous failure !!!!"
@@ -332,20 +377,90 @@ if ( ($fatal_error -eq $false) -and ($core_loop_test -eq $true) )
 
                 Wait-prime95 -CPUCore $core -WaitTime $cycle_time -Loop $i
 
-                if ( ($process -ne 0) -and ($process.HasExited -eq $false) )
-                {
-                    if ($process.CloseMainWindow() -eq $fales)
-                    {
-                        $process.Kill()
-                    }
-                    Write-Log "Waiting for prime95 to close"
-                    Wait-Process -Id $process.Id -ErrorAction SilentlyContinue
-                    $process.Close()
-                }
+                Exit-Process -Process $process -ProcessName "prime95"
             }
         }
     }
 }
+
+if ( ($fatal_error -eq $false) -and ($core_jumping_test -eq $true) )
+{
+    $test="core_jumping_test"
+    $loops=$core_jumping_loops
+    $cycle_time=$core_jumping_cycle_time
+    [int]$prev_core=-1
+    [int]$core=-1
+
+    Write-Log "Starting core jumping test on cores $first_core through $last_core"
+
+    Clean-p95-Results ($test)
+
+    for ($i=1; $i -le $loops; $i++)
+    {
+        Write-Log "Loop $i out of $loops"
+
+        for ($j=$first_core; $j -le $last_core; $j++)
+        {
+            # randomly pick a new core to start or move to
+            while ($core -eq $prev_core) { $core=Get-Random -Minimum $first_core -Maximum $last_core }
+
+            # skip testing if this core already failied in an earlier loop
+            if (Test-Path "$work_dir\*.core${core}_loop*_failure.txt")
+            {
+                Write-Log "!!!! ============================================= !!!!"
+                Write-Log "!!!! Skipping core ${core} due to previous failure !!!!"
+                Write-Log "!!!! ============================================= !!!!"
+            }
+            else
+            {
+                $timer=0
+                $p95result=""
+
+                Write-Log "Starting $cycle_time second torture test on core $core"
+
+                # Start or re-start stress test
+                if ( (Get-Process -Name prime95 -ErrorAction SilentlyContinue).Count -eq 0 )
+                {
+                    Start-Process -FilePath "$work_dir\p95\prime95.exe" -ArgumentList "-T" -WindowStyle Minimized
+                }
+                
+                $process=Set-Affinity -CPUCore $core -ProcessName "prime95"
+
+                Start-Sleep -Milliseconds 100
+                $p95result = if (Test-Path "$work_dir\p95\results.txt") {Select-String "$work_dir\p95\results.txt" -Pattern ERROR}
+                if ($p95result)
+                {
+                    if ($prev_core -gt -1)
+                    {
+                        Write-Log "!!!! ================================================================================== !!!!"
+                        Write-Log "!!!! Warning, test failed within 100 ms.  Previous core $prev_core might not be stable  !!!!"
+                        Write-Log "!!!! ================================================================================== !!!!"
+                    }
+                    p95-Error -p95result $p95result.Line -process $process -CPUCore $core -Loop $i
+                    Exit-Process -Process $process -ProcessName "prime95"
+                }
+                elseif ($process.HasExited -ne $false)
+                {
+                    if ($prev_core -gt -1)
+                    {
+                        Write-Log "!!!! ================================================================================== !!!!"
+                        Write-Log "!!!! Warning, test failed within 100 ms.  Previous core $prev_core might not be stable  !!!!"
+                        Write-Log "!!!! ================================================================================== !!!!"
+                    }
+                    p95-Error -p95result $p95result.Line -process $process -CPUCore $core -Loop $i
+                }
+                else
+                {
+                    Wait-prime95 -CPUCore $core -WaitTime $cycle_time -Loop $i
+                }
+            }
+            $prev_core=$core
+        }
+    }
+
+    Exit-Process -Process $process -ProcessName "prime95"
+}
+
 
 if ( $fatal_error -eq $true)
 {
