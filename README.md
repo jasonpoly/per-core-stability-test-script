@@ -24,14 +24,14 @@ That's it! The script will walk you through the rest. Further reading below.
 This script will extract, configure, and run a Prime95 on single thread using `$process.ProcessorAffinity` to assign to each cpu core for the specified time. This script assumes SMT (multithreading) is enabled. This means one core has two threads, so the process is assigned to two threads at a time.  
 
 
-## Adjust the following to customize length of time to run
+## Customize length of time to run
 ```
 $loops      # Default = 3.   Number of times to loop arount all cores.
 $cycle_time # Default = 180. Time (seconds) to run on each core.
 $cooldown   # Default = 15.  Time (seconds) to cool down between testing each core.
 ```
 
-## Adjust next two values to limit testing to a specific range of cores
+## Limit testing to a specific range of cores
 ```
 $first_core # Default = 0.  First core to test in each loop. Any cores lower than this will not be tested.
 $last_core  # Default = 31. Last core to test in each loop. Any cores higher than this will not be tested.
