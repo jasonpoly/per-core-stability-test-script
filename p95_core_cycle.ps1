@@ -1,45 +1,31 @@
 # Windows Powershell Script
-# Will extract, configure and run a single thread on prime 95,
-# using $process.ProcessorAffinity to assign to each cpu core for the specified time
+# Will extract, configure, and run a Prime95 on asingle thread using
+# $process.ProcessorAffinity to assign to each cpu core for the specified time
 
-$p95path="p95v303b6.win64.zip"; # path to p95 .zip you want to extract and use
+$p95path="p95v303b6.win64.zip"; # path to p95.zip you want to extract and use
 
-# adjust the following to customize length of time to run
-$core_loop_test=$true;    # Default=$true.  Basic test to loop around all cores.  Set to $falue to disable. 
-$loops=3;                 # Default=3. Number of times to loop around all cores.
-$cycle_time=180;          # Default=180.  Approx time in s to run on each core.  
-$cooldown=15;             # Default=15.  Time in s to cool down between testing each core.  
+# Customize length of time to run
+$core_loop_test=$true;    # Default=$true. Basic test to loop around all cores.  Set to $falue to disable. 
+$loops=3;                 # Default=3.     Number of times to loop arount all cores.
+$cycle_time=180;          # Default=180.   Time (seconds) to run on each core.
+$cooldown=5;              # Default=5.     Time (seconds) to cool down between testing each core.
 
-$core_jumping_test=$true;      # Default=$true.  Test to move process from core to core.  Set to $falue to disable.
-$core_jumping_loops=5;         # Default=5. Number of loops to run.
-$core_jumping_cycle_time=10;   # Default=10.  Approx time in s to run on each core.  
+$core_jumping_test=$true;      # Default=$true. Test to move process from core to core.  Set to $falue to disable.
+$core_jumping_loops=5;         # Default=5.     Number of loops to run.
+$core_jumping_cycle_time=10;   # Default=10.    Approx time in s to run on each core.  
 
-# adjust next two values to limit testing to a specific range of cores
-$first_core=0;   # First core to test in each loop.  Default=0.  Any cores lower than this number will not be tested.
-$last_core=31;   # Last core to test in each loop.  Any cores (that exist) higher than this number will not be tested.
-                 # Will automaticlly get adjusted down to the actual number of detected cores.
-                 # Default and MAX value=31.  Cores 32 or higher will result in an Error: "Arithmetic operation resulted in an overflow."
+# Limit testing to a specific range of cores
+$first_core=0;   # Default=0.  First core to test in each loop. Any cores lower than this will not be tested.
+$last_core=31;   # Default=31. Last core to test in each loop. Any cores higher than this will not be tested.
+                 # Will automatically get adjusted down to the actual number of detected cores.
+                 # Cores 32 or higher will result in an Error: "Arithmetic operation resulted in an overflow."
 
-# additional settings
-$stop_on_error=$false; # Default=$false.  $true will stop if an error is found, otherwise skip to the next core. 
-$timestep=1;           # Minimum time to run stress test.  Will check for errors every this many seconds.
-$use_smt=$true;        # Default=$true.  $false will only enable one thread on each physical core even if SMT (Hyperthreading) is enabled on the system.
+# Additional settings
+$stop_on_error=$false; # Default=$false.   $true will stop if an error is found, otherwise skip to the next core. 
+$timestep=1;           # Min time to run.  Will check for errors every this many seconds.
+$use_smt=$true;        # Default=$true.    $false will only enable one thread on each physical core even if SMT (Hyperthreading) is enabled on the system.
+$fatal_error=$false;   # Default=$false.   Script sets this to true if there is an unrecoverable error. Any subsequent tests will then be skipped.
 
-$fatal_error=$false;   # Default=$false.  Script sets this to true if there is an unrecoverable error.  Any subsequent tests will then be skipped.
-
-# After extracting, we will add the following lines to local.txt for single thread, non-AVX test
-#     NumCPUs=1
-#     CpuNumHyperthreads=1
-#     CpuSupportsAVX=0
-#     CpuSupportsAVX2=0
-#     CpuSupportsAVX512F=0
-# Add the following lines to prime.txt for stress test with FFT size of 84
-#     StressTester=1
-#     UsePrimenet=0
-#     MinTortureFFT=84
-#     MaxTortureFFT=84
-#     TortureMem=8
-#     TortureTime=3
 
 filter timestamp {"$(Get-Date -Format G): $_"}
 
@@ -56,7 +42,6 @@ else
 ###################################################################
 # Functions
 ###################################################################
-
 function Write-Log ($msg)
 {
     Write-Output $msg | timestamp
@@ -83,18 +68,14 @@ function Set-Affinity
         [Parameter(Mandatory=$true)]$CPUCore, 
         [Parameter(Mandatory=$true)]$ProcessName
     )
-
     $time_out=10
-
     $starttime=(GET-DATE)
     $runtime=0
-
-    while ( ($runtime -lt $time_out) -and (Get-Process -Name $ProcessName -ErrorAction SilentlyContinue).Count -eq 0 )
-    {        
+    while (($runtime -lt $time_out) -and (Get-Process -Name $ProcessName -ErrorAction SilentlyContinue).Count -eq 0 )
+    {
         Start-Sleep -Milliseconds 100
-        $runtime = (NEW-TIMESPAN –Start $starttime –End (GET-DATE)).TotalSeconds
+        $runtime=(NEW-TIMESPAN –Start $starttime –End (GET-DATE)).TotalSeconds
     }
-
     if ($runtime -ge $time_out)
     {
         Write-Log "!!! =================================================== !!!"
@@ -107,7 +88,7 @@ function Set-Affinity
         if ($smt_enabled)
         {
             if ($use_smt) 
-            { 
+            {
                 [Int64]$affinity=[Math]::Pow(2, $CPUCore*2) + [Math]::Pow(2, $CPUCore*2+1) 
             }
             else 
@@ -134,7 +115,6 @@ function p95-Error
         [Parameter(Mandatory=$true)]$CPUCore,
         [Parameter(Mandatory=$true)]$Loop
     )
-
     if ($p95result)
     {
         Write-Log "!!! ============================================= !!!"
@@ -144,7 +124,7 @@ function p95-Error
         Write-Log "$p95result"
         mv "$work_dir\p95\results.txt" "$work_dir\${test}.core${CPUCore}_loop${Loop}_failure.txt"
         if ($stop_on_error) 
-        { 
+        {
             $process.CloseMainWindow()
             $process.Close()
             Wait-Event 
@@ -167,7 +147,7 @@ function p95-Error
             "Prime95 process closed unexpectedly" >> "$work_dir\${test}.core${CPUCore}_loop${Loop}_failure.txt"
         }
         if ($stop_on_error) 
-        { 
+        {
             $process.CloseMainWindow()
             $process.Close()
             Wait-Event 
@@ -183,18 +163,16 @@ function Wait-prime95
         [Parameter(Mandatory=$true)]$WaitTime,
         [Parameter(Mandatory=$true)]$Loop
     )
-
-    # wait for p95 to run for $cycle_time, as long as there is no error, and no failure in a previous loop
+    # Wait for p95 to run for $cycle_time, as long as there is no error, and no failure in a previous loop
     $runtime=0
     $p95result=""
     $starttime=(GET-DATE)
-    while ( ($runtime -lt $WaitTime) -and (-not($p95result)) -and ((Test-Path "$work_dir\core${CPUCore}_loop*_failure.txt") -eq $false) -and ($process.HasExited -eq $false) )
+    while (($runtime -lt $WaitTime) -and (-not($p95result)) -and ((Test-Path "$work_dir\core${CPUCore}_loop*_failure.txt") -eq $false) -and ($process.HasExited -eq $false))
     {
         Start-Sleep -Seconds $timestep
-        $p95result = if (Test-Path "$work_dir\p95\results.txt") {Select-String "$work_dir\p95\results.txt" -Pattern ERROR}
-        $runtime = (NEW-TIMESPAN –Start $starttime –End (GET-DATE)).TotalSeconds
+        $p95result=if (Test-Path "$work_dir\p95\results.txt") {Select-String "$work_dir\p95\results.txt" -Pattern ERROR}
+        $runtime=(NEW-TIMESPAN –Start $starttime –End (GET-DATE)).TotalSeconds
     }
-
     if ($p95result)
     {
         p95-Error -p95result $p95result.Line -process $process -CPUCore $CPUCore -Loop $Loop
@@ -205,7 +183,7 @@ function Wait-prime95
     }
     else
     {
-        Write-Log "Test passed on core $CPUCore."            
+        Write-Log "Test passed on core $CPUCore."
     }
 }
 
@@ -217,7 +195,7 @@ function Exit-Process
         [Parameter(Mandatory=$true)]$ProcessName
     )
 
-    if ( ($Process -ne 0) -and ($Process.HasExited -eq $false) )
+    if (($Process -ne 0) -and ($Process.HasExited -eq $false))
     {
         if ($Process.CloseMainWindow() -eq $fales)
         {
@@ -252,7 +230,7 @@ else
     Write-Log "!!! ============================================= !!!"
     Write-Log "!!! $work_dir\$p95path not found    "
     Write-Log "!!! Download and copy this into $work_dir"
-    Write-Log "!!! ============================================= !!!"    
+    Write-Log "!!! ============================================= !!!"
     Wait-Event    
     exit
 }
@@ -263,9 +241,9 @@ cp "$work_dir\prime.txt" "$work_dir\p95\"
 
 # Figure out how many cores we have an if SMT (Hyperthreading) is enabled or disabled
 # We will then stress one core at a time, but use both threads on that core if SMT is enabled
-$NumberOfLogicalProcessors = Get-WmiObject Win32_Processor | Measure -Property  NumberOfLogicalProcessors -Sum
-$NumberOfCores = Get-WmiObject Win32_Processor | Measure -Property  NumberOfCores -Sum
-if ( ($NumberOfCores.Sum * 2) -eq $NumberOfLogicalProcessors.Sum )
+$NumberOfLogicalProcessors=Get-WmiObject Win32_Processor | Measure -Property  NumberOfLogicalProcessors -Sum
+$NumberOfCores=Get-WmiObject Win32_Processor | Measure -Property  NumberOfCores -Sum
+if (($NumberOfCores.Sum * 2) -eq $NumberOfLogicalProcessors.Sum)
 {
     Write-Log "Detected $($NumberOfCores.Sum) cores and $($NumberOfLogicalProcessors.Sum) threads.  SMT is enabled"
     if ($use_smt -eq $true)
@@ -279,7 +257,7 @@ if ( ($NumberOfCores.Sum * 2) -eq $NumberOfLogicalProcessors.Sum )
 
     $smt_enabled=$true
 }
-elseif ( $NumberOfCores.Sum -eq $NumberOfLogicalProcessors.Sum )
+elseif ($NumberOfCores.Sum -eq $NumberOfLogicalProcessors.Sum)
 {
     Write-Log "Detected $($NumberOfCores.Sum) cores and $($NumberOfLogicalProcessors.Sum) threads.  SMT is disabled"
     $smt_enabled=$false
@@ -289,13 +267,13 @@ else
     Write-Log "!!! =========================================================================== !!!"
     Write-Log "!!! ERROR detected $NumberOfCores cores and $NumberOfLogicalProcessors threads. !!!"
     Write-Log "!!! This script only supports 1 or 2 threads per core                           !!!"
-    Write-Log "!!! =========================================================================== !!!"    
+    Write-Log "!!! =========================================================================== !!!"
     $fatal_error=$true
 }
 
 if ($last_core -ge $NumberOfCores.Sum)
 {
-    $last_core = $NumberOfCores.Sum-1
+    $last_core=$NumberOfCores.Sum-1
 }
 
 if ((Get-Process -Name prime95 -ErrorAction SilentlyContinue).Count -gt 0)
@@ -306,7 +284,7 @@ if ((Get-Process -Name prime95 -ErrorAction SilentlyContinue).Count -gt 0)
     $fatal_error=$true
 }
 
-if ( ($fatal_error -eq $false) -and ($core_loop_test -eq $true) )
+if (($fatal_error -eq $false) -and ($core_loop_test -eq $true))
 {
     $test="core_loop_test"
     Write-Log "Starting loop test on cores $first_core through $last_core"
@@ -360,7 +338,7 @@ if ( ($fatal_error -eq $false) -and ($core_loop_test -eq $true) )
     }
 }
 
-if ( ($fatal_error -eq $false) -and ($core_jumping_test -eq $true) )
+if (($fatal_error -eq $false) -and ($core_jumping_test -eq $true))
 {
     $test="core_jumping_test"
     $loops=$core_jumping_loops
@@ -379,7 +357,7 @@ if ( ($fatal_error -eq $false) -and ($core_jumping_test -eq $true) )
         for ($j=$first_core; $j -le $last_core; $j++)
         {
             # randomly pick a new core to start or move to
-            while ($core -eq $prev_core) { $core=Get-Random -Minimum $first_core -Maximum $last_core }
+            while ($core -eq $prev_core) {$core=Get-Random -Minimum $first_core -Maximum $last_core}
 
             # skip testing if this core already failied in an earlier loop
             if (Test-Path "$work_dir\*.core${core}_loop*_failure.txt")
@@ -396,7 +374,7 @@ if ( ($fatal_error -eq $false) -and ($core_jumping_test -eq $true) )
                 Write-Log "Starting $cycle_time second torture test on core $core"
 
                 # Start or re-start stress test
-                if ( (Get-Process -Name prime95 -ErrorAction SilentlyContinue).Count -eq 0 )
+                if ((Get-Process -Name prime95 -ErrorAction SilentlyContinue).Count -eq 0)
                 {
                     Start-Process -FilePath "$work_dir\p95\prime95.exe" -ArgumentList "-T" -WindowStyle Minimized
                 }
@@ -404,7 +382,7 @@ if ( ($fatal_error -eq $false) -and ($core_jumping_test -eq $true) )
                 $process=Set-Affinity -CPUCore $core -ProcessName "prime95"
 
                 Start-Sleep -Milliseconds 100
-                $p95result = if (Test-Path "$work_dir\p95\results.txt") {Select-String "$work_dir\p95\results.txt" -Pattern ERROR}
+                $p95result=if (Test-Path "$work_dir\p95\results.txt") {Select-String "$work_dir\p95\results.txt" -Pattern ERROR}
                 if ($p95result)
                 {
                     if ($prev_core -gt -1)
@@ -438,10 +416,9 @@ if ( ($fatal_error -eq $false) -and ($core_jumping_test -eq $true) )
     Exit-Process -Process $process -ProcessName "prime95"
 }
 
-
-if ( $fatal_error -eq $true)
+if ($fatal_error -eq $true)
 {
-    Write-Log ""    
+    Write-Log ""
     Write-Log "Script encountered an error.  Resolve and retry"
 }
 else
@@ -451,4 +428,3 @@ else
     Write-Log "Check log at $work_dir\cycle.log for any failures"
 }
 Wait-Event
-
