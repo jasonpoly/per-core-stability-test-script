@@ -97,9 +97,9 @@ function Set-Affinity
 
     if ($runtime -ge $time_out)
     {
-        Write-Log "!!!! =================================================== !!!!"
-        Write-Log "!!!! ERROR Timed out waiting for $ProcessName to start  !!!!"
-        Write-Log "!!!! =================================================== !!!!"
+        Write-Log "!!! =================================================== !!!"
+        Write-Log "!!! ERROR Timed out waiting for $ProcessName to start  !!!"
+        Write-Log "!!! =================================================== !!!"
         Write-Output 0
     }
     else
@@ -137,10 +137,10 @@ function p95-Error
 
     if ($p95result)
     {
-        Write-Log "!!!! ============================================= !!!!"
-        Write-Log "!!!! Test FAILED on core $CPUCore.                    !!!!"
-        Write-Log "!!!! Check core${CPUCore}_loop${Loop}_failure.txt        !!!!"
-        Write-Log "!!!! ============================================= !!!!"
+        Write-Log "!!! ============================================= !!!"
+        Write-Log "!!! Test FAILED on core $CPUCore.                    !!!"
+        Write-Log "!!! Check core${CPUCore}_loop${Loop}_failure.txt        !!!"
+        Write-Log "!!! ============================================= !!!"
         Write-Log "$p95result"
         mv "$work_dir\p95\results.txt" "$work_dir\${test}.core${CPUCore}_loop${Loop}_failure.txt"
         if ($stop_on_error) 
@@ -152,11 +152,11 @@ function p95-Error
     } 
     elseif ($process.HasExited -ne $false)
     {
-        Write-Log "!!!! ============================================= !!!!"
-        Write-Log "!!!! Prime95 process closed unexpectedly           !!!!"
-        Write-Log "!!!! Test FAILED on core $CPUCore.                    !!!!"
-        Write-Log "!!!! Check core${CPUCore}_loop${Loop}_failure.txt        !!!!"
-        Write-Log "!!!! ============================================= !!!!"
+        Write-Log "!!! ============================================= !!!"
+        Write-Log "!!! Prime95 process closed unexpectedly           !!!"
+        Write-Log "!!! Test FAILED on core $CPUCore.                    !!!"
+        Write-Log "!!! Check core${CPUCore}_loop${Loop}_failure.txt        !!!"
+        Write-Log "!!! ============================================= !!!"
         Write-Log "$p95result"
         if (Test-Path "$work_dir\p95\results.txt") 
         {
@@ -249,10 +249,10 @@ if (Test-Path "$work_dir\$p95path")
 }
 else
 {
-    Write-Log "!!!! ============================================= !!!!"
-    Write-Log "!!!! $work_dir\$p95path not found    "
-    Write-Log "!!!! Download and copy this into $work_dir"
-    Write-Log "!!!! ============================================= !!!!"    
+    Write-Log "!!! ============================================= !!!"
+    Write-Log "!!! $work_dir\$p95path not found    "
+    Write-Log "!!! Download and copy this into $work_dir"
+    Write-Log "!!! ============================================= !!!"    
     Wait-Event    
     exit
 }
@@ -286,10 +286,10 @@ elseif ( $NumberOfCores.Sum -eq $NumberOfLogicalProcessors.Sum )
 }
 else
 {
-    Write-Log "!!!! =========================================================================== !!!!"
-    Write-Log "!!!! ERROR detected $NumberOfCores cores and $NumberOfLogicalProcessors threads. !!!!"
-    Write-Log "!!!! This script only supports 1 or 2 threads per core                           !!!!"
-    Write-Log "!!!! =========================================================================== !!!!"    
+    Write-Log "!!! =========================================================================== !!!"
+    Write-Log "!!! ERROR detected $NumberOfCores cores and $NumberOfLogicalProcessors threads. !!!"
+    Write-Log "!!! This script only supports 1 or 2 threads per core                           !!!"
+    Write-Log "!!! =========================================================================== !!!"    
     $fatal_error=$true
 }
 
@@ -300,9 +300,9 @@ if ($last_core -ge $NumberOfCores.Sum)
 
 if ((Get-Process -Name prime95 -ErrorAction SilentlyContinue).Count -gt 0)
 {
-    Write-Log "!!!! ============================================= !!!!"
-    Write-Log "!!!! ERROR Prime95 is already running              !!!!"
-    Write-Log "!!!! ============================================= !!!!"
+    Write-Log "!!! ============================================= !!!"
+    Write-Log "!!! ERROR Prime95 is already running              !!!"
+    Write-Log "!!! ============================================= !!!"
     $fatal_error=$true
 }
 
@@ -325,9 +325,9 @@ if ( ($fatal_error -eq $false) -and ($core_loop_test -eq $true) )
             # skip testing if this core already failied in an earlier loop
             if (Test-Path "$work_dir\*.core${core}_loop*_failure.txt")
             {
-                Write-Log "!!!! ============================================= !!!!"
-                Write-Log "!!!! Skipping core ${core} due to previous failure !!!!"
-                Write-Log "!!!! ============================================= !!!!"
+                Write-Log "!!! ============================================= !!!"
+                Write-Log "!!! Skipping core ${core} due to previous failure !!!"
+                Write-Log "!!! ============================================= !!!"
             }
             else
             {
@@ -384,9 +384,9 @@ if ( ($fatal_error -eq $false) -and ($core_jumping_test -eq $true) )
             # skip testing if this core already failied in an earlier loop
             if (Test-Path "$work_dir\*.core${core}_loop*_failure.txt")
             {
-                Write-Log "!!!! ============================================= !!!!"
-                Write-Log "!!!! Skipping core ${core} due to previous failure !!!!"
-                Write-Log "!!!! ============================================= !!!!"
+                Write-Log "!!! ============================================= !!!"
+                Write-Log "!!! Skipping core ${core} due to previous failure !!!"
+                Write-Log "!!! ============================================= !!!"
             }
             else
             {
@@ -409,9 +409,9 @@ if ( ($fatal_error -eq $false) -and ($core_jumping_test -eq $true) )
                 {
                     if ($prev_core -gt -1)
                     {
-                        Write-Log "!!!! ================================================================================== !!!!"
-                        Write-Log "!!!! Warning, test failed within 100 ms.  Previous core $prev_core might not be stable  !!!!"
-                        Write-Log "!!!! ================================================================================== !!!!"
+                        Write-Log "!!! ================================================================================== !!!"
+                        Write-Log "!!! Warning, test failed within 100 ms.  Previous core $prev_core might not be stable  !!!"
+                        Write-Log "!!! ================================================================================== !!!"
                     }
                     p95-Error -p95result $p95result.Line -process $process -CPUCore $core -Loop $i
                     Exit-Process -Process $process -ProcessName "prime95"
@@ -420,9 +420,9 @@ if ( ($fatal_error -eq $false) -and ($core_jumping_test -eq $true) )
                 {
                     if ($prev_core -gt -1)
                     {
-                        Write-Log "!!!! ================================================================================== !!!!"
-                        Write-Log "!!!! Warning, test failed within 100 ms.  Previous core $prev_core might not be stable  !!!!"
-                        Write-Log "!!!! ================================================================================== !!!!"
+                        Write-Log "!!! ================================================================================== !!!"
+                        Write-Log "!!! Warning, test failed within 100 ms.  Previous core $prev_core might not be stable  !!!"
+                        Write-Log "!!! ================================================================================== !!!"
                     }
                     p95-Error -p95result $p95result.Line -process $process -CPUCore $core -Loop $i
                 }
