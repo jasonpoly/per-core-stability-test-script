@@ -78,9 +78,9 @@ function Set-Affinity
     }
     if ($runtime -ge $time_out)
     {
-        Write-Log "!!! =================================================== !!!"
+        Write-Log "!!! ============================================= !!!"
         Write-Log "!!! ERROR: Timed out waiting for $ProcessName to start  !!!"
-        Write-Log "!!! =================================================== !!!"
+        Write-Log "!!! ============================================= !!!"
         Write-Output 0
     }
     else
@@ -204,7 +204,7 @@ function Exit-Process
         Write-Log "Waiting for $ProcessName to close"
         Wait-Process -Id $Process.Id -ErrorAction SilentlyContinue
         $Process.Close()
-		Write-Log "====================================================="
+		Write-Log "============================================="
     }
 }
 
@@ -262,10 +262,10 @@ elseif ($NumberOfCores.Sum -eq $NumberOfLogicalProcessors.Sum)
 }
 else
 {
-    Write-Log "!!! =========================================================================== !!!"
+    Write-Log "!!! ============================================= !!!"
     Write-Log "!!! ERROR detected $NumberOfCores cores and $NumberOfLogicalProcessors threads. !!!"
     Write-Log "!!! This script only supports 1 or 2 threads per core                           !!!"
-    Write-Log "!!! =========================================================================== !!!"
+    Write-Log "!!! ============================================= !!!"
     $fatal_error=$true
 }
 
@@ -344,7 +344,7 @@ if (($fatal_error -eq $false) -and ($core_jumping_test -eq $true))
 
     for ($i=1; $i -le $loops; $i++)
     {
-		Write-Log "====================================================="
+		Write-Log "============================================="
         Write-Log "Starting loop $i out of $loops"
         for ($j=$first_core; $j -le $last_core; $j++)
         {
@@ -374,9 +374,10 @@ if (($fatal_error -eq $false) -and ($core_jumping_test -eq $true))
                 {
                     if ($prev_core -gt -1)
                     {
-                        Write-Log "!!! ================================================================================== !!!"
-                        Write-Log "!!! Warning, test failed within 100 ms.  Previous core $prev_core might not be stable  !!!"
-                        Write-Log "!!! ================================================================================== !!!"
+                        Write-Log "!!! ============================================= !!!"
+                        Write-Log "!!! Warning! Test failed within 100 ms.           !!!"
+						Write-Log "!!! Previous core $prev_core might not be stable          !!!"
+                        Write-Log "!!! ============================================= !!!"
                     }
                     p95-Error -p95result $p95result.Line -process $process -CPUCore $core -Loop $i
                     Exit-Process -Process $process -ProcessName "prime95"
@@ -385,9 +386,10 @@ if (($fatal_error -eq $false) -and ($core_jumping_test -eq $true))
                 {
                     if ($prev_core -gt -1)
                     {
-                        Write-Log "!!! ================================================================================== !!!"
-                        Write-Log "!!! Warning, test failed within 100 ms.  Previous core $prev_core might not be stable  !!!"
-                        Write-Log "!!! ================================================================================== !!!"
+                        Write-Log "!!! ============================================= !!!"
+                        Write-Log "!!! Warning! Test failed within 100 ms.           !!!"
+						Write-Log "!!! Previous core $prev_core might not be stable          !!!"
+                        Write-Log "!!! ============================================= !!!"
                     }
                     p95-Error -p95result $p95result.Line -process $process -CPUCore $core -Loop $i
                 }
@@ -405,7 +407,7 @@ if (($fatal_error -eq $false) -and ($core_jumping_test -eq $true))
 if ($fatal_error -eq $true)
 {
     Write-Log ""
-    Write-Log "Script encountered an error.  Resolve and retry"
+    Write-Log "Script encountered an error. Resolve and retry."
 }
 else
 {
