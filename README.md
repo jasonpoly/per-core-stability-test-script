@@ -8,13 +8,13 @@ Test script developed for easier testing of Zen 3 curve offsets.
 **WARNING: On Ryzen CPUs, a single thread can boost to high voltages. This can potentially degrade the CPU over time.**  
 
 
-## Step 1.
+## Step 1
 Download [this repository](https://github.com/jasonpoly/per-core-stability-test-script/archive/refs/heads/main.zip).
 
-## Step 2.
+## Step 2
 Download [Prime95](http://www.mersenne.org/ftp_root/gimps/p95v303b6.win64.zip). Place the Prime95 zip file into the folder `per-core-stability-test-script`.  
 
-## Step 3.
+## Step 3
 Go to the directory where you downloaded the repository. Right click on `p95_core_cycle.ps1` and select "Run with PowerShell."  
 
 ## All done!
