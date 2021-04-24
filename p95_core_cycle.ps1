@@ -3,6 +3,7 @@
 # $process.ProcessorAffinity to assign to each cpu core for the specified time
 
 $p95path="p95v303b6.win64.zip"; # path to p95.zip you want to extract and use
+$core_failure = @()
 
 # Customize length of time to run
 $core_loop_test=$true;    # Default=$true. Basic test to loop around all cores.  Set to $falue to disable. 
@@ -49,7 +50,7 @@ function Write-Log ($msg)
 
 function Clean-p95-Results ($test)
 {
-    Write-Log "Moving any previous results into ${test}.prev.results\"
+    Write-Log "Moving any previous results into ${test}.prev.results"
     if (Test-Path "$work_dir\${test}.core*failure.txt")
     {
         mkdir "$work_dir\${test}.prev.results" -ErrorAction SilentlyContinue
@@ -59,6 +60,7 @@ function Clean-p95-Results ($test)
     {
         mv -Force "$work_dir\p95\results.txt" "$work_dir\p95\prev.results.txt"
     }
+	Write-Log "*****************************************************"
 }
 
 
@@ -122,6 +124,7 @@ function p95-Error
         Write-Log "!!! Check core${CPUCore}_loop${Loop}_failure.txt                 !!!"
         Write-Log "!!! ============================================= !!!"
         Write-Log "$p95result"
+		$core_failure += "$CPUCore"
         mv "$work_dir\p95\results.txt" "$work_dir\${test}.core${CPUCore}_loop${Loop}_failure.txt"
         if ($stop_on_error)
         {
@@ -138,6 +141,7 @@ function p95-Error
         Write-Log "!!! Check core${CPUCore}_loop${Loop}_failure.txt                 !!!"
         Write-Log "!!! ============================================= !!!"
         Write-Log "$p95result"
+		$core_failure += "$CPUCore"
         if (Test-Path "$work_dir\p95\results.txt")
         {
             mv "$work_dir\p95\results.txt" "$work_dir\${test}.core${CPUCore}_loop${Loop}_failure.txt"
@@ -201,10 +205,9 @@ function Exit-Process
         {
             $Process.Kill()
         }
-        Write-Log "Waiting for $ProcessName to close"
+        Write-Log "Waiting for $ProcessName to close."
         Wait-Process -Id $Process.Id -ErrorAction SilentlyContinue
         $Process.Close()
-		Write-Log "============================================="
     }
 }
 
@@ -216,25 +219,25 @@ if (Test-Path "$work_dir\$p95path")
 {
     if (!(Test-Path "$work_dir\p95"))
     {
-        Write-Log "Extracting prime95 from $p95path"
+        Write-Log "Extracting Prime95 from $p95path"
         Expand-Archive -LiteralPath "$p95path" -DestinationPath p95 -ErrorAction SilentlyContinue
     }
     else
     {
-        Write-Log "Using previously extracted p95 found in $work_dir\p95"
+        Write-Log "Using previously extracted Prime95 found in $work_dir\p95"
     }
 }
 else
 {
     Write-Log "!!! ============================================= !!!"
     Write-Log "!!! $work_dir\$p95path not found"
-    Write-Log "!!! Download and copy this into $work_dir"
+    Write-Log "!!! Download Prime95 and copy it to into $work_dir"
     Write-Log "!!! ============================================= !!!"
     Wait-Event    
     exit
 }
 
-Write-Log "Configuring prime95 for single core, non-AVX torture test"
+Write-Log "Configuring Prime95 for single core, non-AVX torture test"
 cp "$work_dir\local.txt" "$work_dir\p95\"
 cp "$work_dir\prime.txt" "$work_dir\p95\"
 
@@ -244,27 +247,27 @@ $NumberOfLogicalProcessors=Get-WmiObject Win32_Processor | Measure -Property  Nu
 $NumberOfCores=Get-WmiObject Win32_Processor | Measure -Property  NumberOfCores -Sum
 if (($NumberOfCores.Sum * 2) -eq $NumberOfLogicalProcessors.Sum)
 {
-    Write-Log "Detected $($NumberOfCores.Sum) cores and $($NumberOfLogicalProcessors.Sum) threads.  SMT is enabled"
+    Write-Log "Detected $($NumberOfCores.Sum) cores and $($NumberOfLogicalProcessors.Sum) threads. SMT is enabled."
     if ($use_smt -eq $true)
     {
-        Write-Log "use_smt=$true. Using 2 threads per core..."
+        Write-Log "use_smt=$true. Using 2 threads per core."
     }
     else
     {
-        Write-Log "use_smt=$false. Using 1 thread per core..."
+        Write-Log "use_smt=$false. Using 1 thread per core."
     }
     $smt_enabled=$true
 }
 elseif ($NumberOfCores.Sum -eq $NumberOfLogicalProcessors.Sum)
 {
-    Write-Log "Detected $($NumberOfCores.Sum) cores and $($NumberOfLogicalProcessors.Sum) threads.  SMT is disabled"
+    Write-Log "Detected $($NumberOfCores.Sum) cores and $($NumberOfLogicalProcessors.Sum) threads. SMT is disabled."
     $smt_enabled=$false
 }
 else
 {
     Write-Log "!!! ============================================= !!!"
     Write-Log "!!! ERROR detected $NumberOfCores cores and $NumberOfLogicalProcessors threads. !!!"
-    Write-Log "!!! This script only supports 1 or 2 threads per core                           !!!"
+    Write-Log "!!! This script only supports 1 or 2 threads per core !!!"
     Write-Log "!!! ============================================= !!!"
     $fatal_error=$true
 }
@@ -285,41 +288,40 @@ if ((Get-Process -Name prime95 -ErrorAction SilentlyContinue).Count -gt 0)
 if (($fatal_error -eq $false) -and ($core_loop_test -eq $true))
 {
     $test="core_loop_test"
-    Write-Log "Starting loop test on cores $first_core through $last_core"
-
+	Write-Log ""
+	Write-Log ""
+    Write-Log "Starting looping test on cores $first_core through $last_core."
     Clean-p95-Results ($test)
-
-    Write-Log "Looping $loops times around all cores"
-
+    Write-Log "Looping $loops times around all cores."
     $first_run=1
-
     for ($i=1; $i -le $loops; $i++)
     {
-        Write-Log "Loop $i out of $loops"
+		Write-Log "*****************************************************"
+        Write-Log "Starting loop $i out of $loops."
         for ($core=$first_core; $core -le $last_core; $core++)
         {
             # Skip testing if this core already failied in an earlier loop
             if (Test-Path "$work_dir\*.core${core}_loop*_failure.txt")
             {
                 Write-Log "!!! ============================================= !!!"
-                Write-Log "!!! Skipping core ${core} due to previous failure      !!!"
+                Write-Log "!!! Skipping core ${core} due to previous failure.      !!!"
                 Write-Log "!!! ============================================= !!!"
             }
             else
             {
                 $timer=0
                 $p95result=""
-                # Don't cool down before the first test
-                if ($first_run -eq 1)
+                if ($first_run -eq 1) # Do not cool down before the first test
                 {
                     $first_run=0
                 }
                 else
                 {
-                    Write-Log "Cooling down for $cooldown seconds"
+                    Write-Log "Cooling down for $cooldown seconds."
                     Start-Sleep -Seconds $cooldown
                 }
-                Write-Log "Starting $cycle_time second torture test on core $core"
+				Write-Log "*****************************************************"
+                Write-Log "Starting $cycle_time second torture test on core $core."
                 # Start stress test
                 Start-Process -FilePath "$work_dir\p95\prime95.exe" -ArgumentList "-T" -WindowStyle Minimized
                 $process=Set-Affinity -CPUCore $core -ProcessName "prime95"
@@ -337,15 +339,14 @@ if (($fatal_error -eq $false) -and ($core_jumping_test -eq $true))
     $cycle_time=$core_jumping_cycle_time
     [int]$prev_core=-1
     [int]$core=-1
-
-    Write-Log "Starting core jumping test on cores $first_core through $last_core"
-
+	Write-Log ""
+	Write-Log ""
+    Write-Log "Starting core jumping test on cores $first_core through $last_core."
     Clean-p95-Results ($test)
-
     for ($i=1; $i -le $loops; $i++)
     {
-		Write-Log "============================================="
-        Write-Log "Starting loop $i out of $loops"
+		Write-Log "*****************************************************"
+        Write-Log "Starting loop $i out of $loops."
         for ($j=$first_core; $j -le $last_core; $j++)
         {
             # randomly pick a new core to start or move to
@@ -354,7 +355,7 @@ if (($fatal_error -eq $false) -and ($core_jumping_test -eq $true))
             if (Test-Path "$work_dir\*.core${core}_loop*_failure.txt")
             {
                 Write-Log "!!! ============================================= !!!"
-                Write-Log "!!! Skipping core ${core} due to previous failure      !!!"
+                Write-Log "!!! Skipping core ${core} due to previous failure.      !!!"
                 Write-Log "!!! ============================================= !!!"
             }
             else
@@ -411,8 +412,10 @@ if ($fatal_error -eq $true)
 }
 else
 {
-    Write-Log ""
+    Write-Log "!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!"
     Write-Log "Testing complete."
-    Write-Log "Check log at $work_dir\cycle.log for any failures"
+	Write-Log "Cores $core_failure are NOT stable."
+    Write-Log "Check log at $work_dir\cycle.log for any failures."
 }
+
 Wait-Event
