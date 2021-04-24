@@ -26,13 +26,13 @@ This script will extract, configure, and run a Prime95 on single thread using `$
 
 ## Adjust the following to customize length of time to run
 ```
-$loops        # Default = 3.   Number of times to loop arount all cores.  
-$cycle_time   # Default = 180. Time (seconds) to run on each core.  
-$cooldown     # Default = 15.  Time (seconds) to cool down between testing each core.  
+$loops      # Default = 3.   Number of times to loop arount all cores.  
+$cycle_time # Default = 180. Time (seconds) to run on each core.  
+$cooldown   # Default = 15.  Time (seconds) to cool down between testing each core.  
 ```
 
 ## Adjust next two values to limit testing to a specific range of cores
 ```
-$first_core   # Default = 0.   First core to test in each loop. Any cores lower than this number will not be tested.  
-$last_core    # Default = 31.  Last core to test in each loop. Any cores higher than this number will not be tested.  
+$first_core # Default = 0.  First core to test in each loop. Any cores lower than this number will not be tested.  
+$last_core  # Default = 31. Last core to test in each loop. Any cores higher than this number will not be tested.  
 ```
