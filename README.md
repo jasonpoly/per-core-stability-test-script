@@ -33,6 +33,6 @@ $cooldown   # Default = 15.  Time (seconds) to cool down between testing each co
 
 ## Adjust next two values to limit testing to a specific range of cores
 ```
-$first_core # Default = 0.  First core to test in each loop. Any cores lower than this number will not be tested.  
-$last_core  # Default = 31. Last core to test in each loop. Any cores higher than this number will not be tested.  
+$first_core # Default = 0.  First core to test in each loop. Any cores lower than this will not be tested.  
+$last_core  # Default = 31. Last core to test in each loop. Any cores higher than this will not be tested.  
 ```
