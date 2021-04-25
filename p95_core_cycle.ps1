@@ -3,7 +3,7 @@
 # $process.ProcessorAffinity to assign to each cpu core for the specified time
 
 $p95path="p95v303b6.win64.zip"; # path to p95.zip you want to extract and use
-$core_failure = @()
+$env:core_failure = @()
 
 # Customize length of time to run
 $core_loop_test=$true;    # Default=$true. Basic test to loop around all cores.  Set to $falue to disable. 
@@ -49,7 +49,8 @@ function Write-Log ($msg)
 
 
 function Clean-p95-Results ($test)
-{
+{	# check for previous results files before anything is written
+	# change logging to time based file naming
     Write-Log "Moving any previous results into ${test}.prev.results"
     if (Test-Path "$work_dir\${test}.core*failure.txt")
     {
@@ -124,7 +125,7 @@ function p95-Error
         Write-Log "!!! Check core${CPUCore}_loop${Loop}_failure.txt                 !!!"
         Write-Log "!!! ============================================= !!!"
         Write-Log "$p95result"
-		$core_failure += "$CPUCore"
+		$env:core_failure += "$CPUCore"
         mv "$work_dir\p95\results.txt" "$work_dir\${test}.core${CPUCore}_loop${Loop}_failure.txt"
         if ($stop_on_error)
         {
@@ -141,7 +142,7 @@ function p95-Error
         Write-Log "!!! Check core${CPUCore}_loop${Loop}_failure.txt                 !!!"
         Write-Log "!!! ============================================= !!!"
         Write-Log "$p95result"
-		$core_failure += "$CPUCore"
+		$env:core_failure += "$CPUCore"
         if (Test-Path "$work_dir\p95\results.txt")
         {
             mv "$work_dir\p95\results.txt" "$work_dir\${test}.core${CPUCore}_loop${Loop}_failure.txt"
@@ -188,6 +189,7 @@ function Wait-prime95
     else
     {
         Write-Log "Test passed on core $CPUCore."
+		Write-Log "*****************************************************"
     }
 }
 
@@ -206,6 +208,7 @@ function Exit-Process
             $Process.Kill()
         }
         Write-Log "Waiting for $ProcessName to close."
+		Write-Log ""
         Wait-Process -Id $Process.Id -ErrorAction SilentlyContinue
         $Process.Close()
     }
@@ -289,7 +292,6 @@ if (($fatal_error -eq $false) -and ($core_loop_test -eq $true))
 {
     $test="core_loop_test"
 	Write-Log ""
-	Write-Log ""
     Write-Log "Starting looping test on cores $first_core through $last_core."
     Clean-p95-Results ($test)
     Write-Log "Looping $loops times around all cores."
@@ -320,7 +322,8 @@ if (($fatal_error -eq $false) -and ($core_loop_test -eq $true))
                     Write-Log "Cooling down for $cooldown seconds."
                     Start-Sleep -Seconds $cooldown
                 }
-				Write-Log "*****************************************************"
+				Write-Log ""
+				#Write-Log "*****************************************************"
                 Write-Log "Starting $cycle_time second torture test on core $core."
                 # Start stress test
                 Start-Process -FilePath "$work_dir\p95\prime95.exe" -ArgumentList "-T" -WindowStyle Minimized
@@ -339,9 +342,9 @@ if (($fatal_error -eq $false) -and ($core_jumping_test -eq $true))
     $cycle_time=$core_jumping_cycle_time
     [int]$prev_core=-1
     [int]$core=-1
-	Write-Log ""
-	Write-Log ""
+	Write-Log "#####################################################"
     Write-Log "Starting core jumping test on cores $first_core through $last_core."
+	Write-Log "#####################################################"
     Clean-p95-Results ($test)
     for ($i=1; $i -le $loops; $i++)
     {
@@ -414,7 +417,7 @@ else
 {
     Write-Log "!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!"
     Write-Log "Testing complete."
-	Write-Log "Cores $core_failure are NOT stable."
+	Write-Log "Cores $env:core_failure are NOT stable."
     Write-Log "Check log at $work_dir\cycle.log for any failures."
 }
 
