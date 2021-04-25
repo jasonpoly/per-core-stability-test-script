@@ -2,10 +2,10 @@
 Test script developed for easier testing of Zen 3 curve offsets.  
 
 **WARNING: Do not use if you have never run Prime95.**  
+**WARNING: Overclocking can potentially degrade the CPU over time.**  
 **WARNING: This script is provided as a convenience. Use at your own risk.**  
 **WARNING: Use a tool such as [HWiNFO64](https://www.hwinfo.com/download) to check for safe temperatures and voltages during testing.**  
 **WARNING: After completing your testing, check that Prime95 is not still running in the background.**  
-**WARNING: On Ryzen CPUs, a single thread can boost to high voltages. This can potentially degrade the CPU over time.**  
 
 
 ## Step 1
