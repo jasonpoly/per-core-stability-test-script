@@ -420,8 +420,11 @@ else
 	$env:core_failure = $env:core_failure | sort # not 100% working, array issue?
     Write-Log "!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!"
     Write-Log "Testing complete."
-	Write-Log "The following cores are NOT stable."
-	Write-Log $env:core_failure
+	if($env:core_failure.Count -gt 0)
+	{
+		Write-Log "The following cores are NOT stable."
+		Write-Log $env:core_failure
+	}
     Write-Log "Console output is stored at $work_dir\logs\$log_file."
 }
 Wait-Event
