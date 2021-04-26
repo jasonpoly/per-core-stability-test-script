@@ -321,7 +321,7 @@ if (($fatal_error -eq $false) -and ($core_loop_test -eq $true))
                 {
                     $first_run=0
                 }
-                else
+                elseif($cooldown -gt 0)
                 {
                     Write-Log "Cooling down for $cooldown seconds."
                     Start-Sleep -Seconds $cooldown
