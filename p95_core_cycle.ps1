@@ -56,12 +56,12 @@ function Write-Log ($msg)
 # LEGACY: No longer needed due to new file naming and handling
 function Clean-p95-Results ($test)
 {
-    Write-Log "Moving any previous results into .\core_failures"
     if (Test-Path "$work_dir\${test}.core*failure*.log")
     {
+		Write-Log "Found previous results. Moving into into .\core_failures"
 		Get-ChildItem -Path ".\*.log" | Move-Item -Destination "$work_dir\core_failures\"
     }
-    if (Test-Path "$work_dir\p95\results.txt")
+    if (Test-Path "$work_dir\p95\results.txt") # Is this necessary?
     {
         mv -Force "$work_dir\p95\results.txt" "$work_dir\p95\prev.results.txt"
     }
