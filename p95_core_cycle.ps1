@@ -55,9 +55,8 @@ function Write-Log ($msg)
 
 # LEGACY: No longer needed due to new file naming and handling
 function Clean-p95-Results ($test)
-{	# check for previous results files before anything is written
-	# change logging to time based file naming
-    Write-Log "Moving any previous results into \core_failures"
+{
+    Write-Log "Moving any previous results into .\core_failures"
     if (Test-Path "$work_dir\${test}.core*failure*.log")
     {
 		Get-ChildItem -Path ".\*.log" | Move-Item -Destination "$work_dir\core_failures\"
@@ -127,7 +126,7 @@ function p95-Error
     {
         Write-Log "!!! ============================================= !!!"
         Write-Log "!!! Test FAILED on core $CPUCore.                        !!!"
-        Write-Log "!!! Check \core_failures                          !!!"
+        Write-Log "!!! Check .\core_failures                         !!!"
         Write-Log "!!! ============================================= !!!"
         Write-Log "$p95result"
 		$env:core_failure += ("$CPUCore")
@@ -144,7 +143,7 @@ function p95-Error
         Write-Log "!!! ============================================= !!!"
         Write-Log "!!! Prime95 process closed unexpectedly           !!!"
         Write-Log "!!! Test FAILED on core $CPUCore.                        !!!"
-        Write-Log "!!! Check \core_failures                          !!!"
+        Write-Log "!!! Check .\core_failures                         !!!"
         Write-Log "!!! ============================================= !!!"
         Write-Log "$p95result"
 		$env:core_failure += ("$CPUCore")
@@ -426,5 +425,4 @@ else
 	Write-Log $env:core_failure
     Write-Log "Check log at $work_dir\logs\$log_file for any failures."
 }
-
 Wait-Event
