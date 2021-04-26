@@ -408,7 +408,6 @@ if (($fatal_error -eq $false) -and ($core_jumping_test -eq $true))
             $prev_core=$core
         }
     }
-    Exit-Process -Process $process -ProcessName "Prime95"
 }
 
 if ($fatal_error -eq $true)
@@ -418,11 +417,11 @@ if ($fatal_error -eq $true)
 }
 else
 {
-	$env:core_failure = $env:core_failure | sort
+	$env:core_failure = $env:core_failure | sort # not 100% working, array issue?
     Write-Log "!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!"
     Write-Log "Testing complete."
 	Write-Log "The following cores are NOT stable."
 	Write-Log $env:core_failure
-    Write-Log "Check log at $work_dir\logs\$log_file for any failures."
+    Write-Log "Console output is stored at $work_dir\logs\$log_file."
 }
 Wait-Event
