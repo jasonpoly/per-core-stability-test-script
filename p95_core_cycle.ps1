@@ -8,14 +8,14 @@ $filedatetime=Get-Date -format FileDateTime
 $log_file="cycle_$filedatetime.log"
 
 # Customize length of time to run
-$core_loop_test=$true;    # Default=$true. Basic test to loop around all cores.  Set to $falue to disable. 
+$core_loop_test=$true;    # Default=$true. Basic test to loop around all cores.  Set to $falue to disable.
 $loops=3;                 # Default=3.     Number of times to loop arount all cores.
 $cycle_time=180;          # Default=180.   Time (seconds) to run on each core.
 $cooldown=5;              # Default=5.     Time (seconds) to cool down between testing each core.
 
 $core_jumping_test=$true;      # Default=$true. Test to move process from core to core.  Set to $falue to disable.
 $core_jumping_loops=5;         # Default=5.     Number of loops to run.
-$core_jumping_cycle_time=10;   # Default=10.    Approx time in s to run on each core.  
+$core_jumping_cycle_time=10;   # Default=10.    Approx time in s to run on each core.
 
 # Limit testing to a specific range of cores
 $first_core=0;   # Default=0.  First core to test in each loop. Any cores lower than this will not be tested.
@@ -24,7 +24,7 @@ $last_core=31;   # Default=31. Last core to test in each loop. Any cores higher 
                  # Cores 32 or higher will result in an Error: "Arithmetic operation resulted in an overflow."
 
 # Additional settings
-$stop_on_error=$false; # Default=$false.   $true will stop if an error is found, otherwise skip to the next core. 
+$stop_on_error=$false; # Default=$false.   $true will stop if an error is found, otherwise skip to the next core.
 $timestep=1;           # Min time to run.  Will check for errors every this many seconds.
 $use_smt=$true;        # Default=$true.    $false will only enable one thread on each physical core even if SMT (Hyperthreading) is enabled on the system.
 $fatal_error=$false;   # Default=$false.   Script sets this to true if there is an unrecoverable error. Any subsequent tests will then be skipped.
@@ -47,29 +47,29 @@ else
 ###################################################################
 # Functions
 ###################################################################
-function Write-Log ($msg)
+function Write-Log-and-timestamp ($msg)
 {
     Write-Output $msg | timestamp
     $msg | timestamp >> "$work_dir\logs\$log_file"
 }
 
 # LEGACY: No longer needed due to new file naming and handling
-function Clean-p95-Results ($test)
+function OldRunScrubber ($test)
 {
     if (Test-Path "$work_dir\${test}.core*failure*.log")
     {
-		Write-Log "Found previous results. Moving into into .\core_failures"
+		Write-Log-and-timestamp "Found previous results. Moving into into .\core_failures"
 		Get-ChildItem -Path ".\*.log" | Move-Item -Destination "$work_dir\core_failures\"
     }
     if (Test-Path "$work_dir\p95\results.txt") # Is this necessary?
     {
-        mv -Force "$work_dir\p95\results.txt" "$work_dir\p95\prev.results.txt"
+        Move-Item -Force "$work_dir\p95\results.txt" "$work_dir\p95\prev.results.txt"
     }
-	Write-Log "Finished moving previous results."
+	Write-Log-and-timestamp "Finished moving previous results."
 }
 
 
-function Set-Affinity 
+function SetAffinity
 {
     param (
         [Parameter(Mandatory=$true)]$CPUCore,
@@ -81,13 +81,13 @@ function Set-Affinity
     while (($runtime -lt $time_out) -and (Get-Process -Name $ProcessName -ErrorAction SilentlyContinue).Count -eq 0)
     {
         Start-Sleep -Milliseconds 100
-        $runtime=(NEW-TIMESPAN –Start $starttime –End (GET-DATE)).TotalSeconds
+        $runtime=(NEW-TIMESPAN -Start $starttime -End (GET-DATE)).TotalSeconds
     }
     if ($runtime -ge $time_out)
     {
-        Write-Log "!!! ============================================= !!!"
-        Write-Log "!!! ERROR: Timed out waiting for $ProcessName to start  !!!"
-        Write-Log "!!! ============================================= !!!"
+        Write-Log-and-timestamp "!!! ============================================= !!!"
+        Write-Log-and-timestamp "!!! ERROR: Timed out waiting for $ProcessName to start  !!!"
+        Write-Log-and-timestamp "!!! ============================================= !!!"
         Write-Output 0
     }
     else
@@ -114,7 +114,7 @@ function Set-Affinity
 }
 
 
-function p95-Error
+function p95Error
 {
     param (
         [Parameter()]$p95result,
@@ -124,13 +124,13 @@ function p95-Error
     )
     if ($p95result)
     {
-        Write-Log "!!! ============================================= !!!"
-        Write-Log "!!! Test FAILED on core $CPUCore.                        !!!"
-        Write-Log "!!! Check .\core_failures                         !!!"
-        Write-Log "!!! ============================================= !!!"
-        Write-Log "$p95result"
+        Write-Log-and-timestamp "!!! ============================================= !!!"
+        Write-Log-and-timestamp "!!! Test FAILED on core $CPUCore.                        !!!"
+        Write-Log-and-timestamp "!!! Check .\core_failures                         !!!"
+        Write-Log-and-timestamp "!!! ============================================= !!!"
+        Write-Log-and-timestamp "$p95result"
 		$env:core_failure += ("$CPUCore")
-        mv "$work_dir\p95\results.txt" "$work_dir\core_failures\${test}.core${CPUCore}_loop${Loop}_failure_$filedatetime.log"
+        Move-Item "$work_dir\p95\results.txt" "$work_dir\core_failures\${test}.core${CPUCore}_loop${Loop}_failure_$filedatetime.log"
         if ($stop_on_error)
         {
             $process.CloseMainWindow()
@@ -140,16 +140,16 @@ function p95-Error
     }
     elseif ($process.HasExited -ne $false)
     {
-        Write-Log "!!! ============================================= !!!"
-        Write-Log "!!! Prime95 process closed unexpectedly           !!!"
-        Write-Log "!!! Test FAILED on core $CPUCore.                        !!!"
-        Write-Log "!!! Check .\core_failures                         !!!"
-        Write-Log "!!! ============================================= !!!"
-        Write-Log "$p95result"
+        Write-Log-and-timestamp "!!! ============================================= !!!"
+        Write-Log-and-timestamp "!!! Prime95 process closed unexpectedly           !!!"
+        Write-Log-and-timestamp "!!! Test FAILED on core $CPUCore.                        !!!"
+        Write-Log-and-timestamp "!!! Check .\core_failures                         !!!"
+        Write-Log-and-timestamp "!!! ============================================= !!!"
+        Write-Log-and-timestamp "$p95result"
 		$env:core_failure += ("$CPUCore")
         if (Test-Path "$work_dir\p95\results.txt")
         {
-            mv "$work_dir\p95\results.txt" "$work_dir\core_failures\${test}.core${CPUCore}_loop${Loop}_failure_$filedatetime.txt"
+            Move-Item "$work_dir\p95\results.txt" "$work_dir\core_failures\${test}.core${CPUCore}_loop${Loop}_failure_$filedatetime.txt"
         }
         else
         {
@@ -180,20 +180,20 @@ function Wait-Prime95
     {
         Start-Sleep -Seconds $timestep
         $p95result=if (Test-Path "$work_dir\p95\results.txt") {Select-String "$work_dir\p95\results.txt" -Pattern ERROR}
-        $runtime=(NEW-TIMESPAN –Start $starttime –End (GET-DATE)).TotalSeconds
+        $runtime=(NEW-TIMESPAN -Start $starttime -End (GET-DATE)).TotalSeconds
     }
     if ($p95result)
     {
-        p95-Error -p95result $p95result.Line -process $process -CPUCore $CPUCore -Loop $Loop
+        p95Error -p95result $p95result.Line -process $process -CPUCore $CPUCore -Loop $Loop
     }
     elseif ($process.HasExited -ne $false)
     {
-        p95-Error -p95result $p95result.Line -process $process -CPUCore $CPUCore -Loop $Loop
+        p95Error -p95result $p95result.Line -process $process -CPUCore $CPUCore -Loop $Loop
     }
     else
     {
-        Write-Log "Test passed on core $CPUCore."
-		Write-Log "-----------------------------------------------------"
+        Write-Log-and-timestamp "Test passed on core $CPUCore."
+		Write-Log-and-timestamp "-----------------------------------------------------"
     }
 }
 
@@ -201,7 +201,7 @@ function Wait-Prime95
 function Exit-Process
 {
     param (
-        [Parameter(Mandatory=$true)]$Process, 
+        [Parameter(Mandatory=$true)]$Process,
         [Parameter(Mandatory=$true)]$ProcessName
     )
 
@@ -211,7 +211,7 @@ function Exit-Process
         {
             $Process.Kill()
         }
-        Write-Log "Waiting for $ProcessName to close."
+        Write-Log-and-timestamp "Waiting for $ProcessName to close."
         Wait-Process -Id $Process.Id -ErrorAction SilentlyContinue
         $Process.Close()
     }
@@ -220,61 +220,61 @@ function Exit-Process
 ###################################################################
 # Main Script
 ###################################################################
-Write-Log "Writing log to $work_dir\$log_file"
+Write-Log-and-timestamp "Writing log to $work_dir\$log_file"
 if (Test-Path "$work_dir\$p95path")
 {
     if (!(Test-Path "$work_dir\p95"))
     {
-        Write-Log "Extracting Prime95 from $p95path"
+        Write-Log-and-timestamp "Extracting Prime95 from $p95path"
         Expand-Archive -LiteralPath "$p95path" -DestinationPath p95 -ErrorAction SilentlyContinue
     }
     else
     {
-        Write-Log "Using previously extracted Prime95 found in $work_dir\p95"
+        Write-Log-and-timestamp "Using previously extracted Prime95 found in $work_dir\p95"
     }
 }
 else
 {
-    Write-Log "!!! ============================================= !!!"
-    Write-Log "!!! $work_dir\$p95path not found"
-    Write-Log "!!! Download Prime95 and copy it to into $work_dir"
-    Write-Log "!!! ============================================= !!!"
-    Wait-Event    
+    Write-Log-and-timestamp "!!! ============================================= !!!"
+    Write-Log-and-timestamp "!!! $work_dir\$p95path not found"
+    Write-Log-and-timestamp "!!! Download Prime95 and copy it to into $work_dir"
+    Write-Log-and-timestamp "!!! ============================================= !!!"
+    Wait-Event
     exit
 }
 
-Write-Log "Configuring Prime95 for single core, non-AVX torture test"
-cp "$work_dir\local.txt" "$work_dir\p95\"
-cp "$work_dir\prime.txt" "$work_dir\p95\"
+Write-Log-and-timestamp "Configuring Prime95 for single core, non-AVX torture test"
+Copy-Item "$work_dir\local.txt" "$work_dir\p95\"
+Copy-Item "$work_dir\prime.txt" "$work_dir\p95\"
 
-# Figure out how many cores we have an if SMT is enabled or disabled.
+# Figure out how many cores we have and if SMT is enabled or disabled.
 # We will then stress one core at a time, but use both threads on that core if SMT is enabled
-$NumberOfLogicalProcessors=Get-WmiObject Win32_Processor | Measure -Property  NumberOfLogicalProcessors -Sum
-$NumberOfCores=Get-WmiObject Win32_Processor | Measure -Property  NumberOfCores -Sum
+$NumberOfLogicalProcessors=Get-CimInstance Win32_Processor | Measure-Object -Property  NumberOfLogicalProcessors -Sum
+$NumberOfCores=Get-CimInstance Win32_Processor | Measure-Object -Property  NumberOfCores -Sum
 if (($NumberOfCores.Sum * 2) -eq $NumberOfLogicalProcessors.Sum)
 {
-    Write-Log "Detected $($NumberOfCores.Sum) cores and $($NumberOfLogicalProcessors.Sum) threads. SMT is enabled."
+    Write-Log-and-timestamp "Detected $($NumberOfCores.Sum) cores and $($NumberOfLogicalProcessors.Sum) threads. SMT is enabled."
     if ($use_smt -eq $true)
     {
-        Write-Log "use_smt=$true. Using 2 threads per core."
+        Write-Log-and-timestamp "use_smt=$true. Using 2 threads per core."
     }
     else
     {
-        Write-Log "use_smt=$false. Using 1 thread per core."
+        Write-Log-and-timestamp "use_smt=$false. Using 1 thread per core."
     }
     $smt_enabled=$true
 }
 elseif ($NumberOfCores.Sum -eq $NumberOfLogicalProcessors.Sum)
 {
-    Write-Log "Detected $($NumberOfCores.Sum) cores and $($NumberOfLogicalProcessors.Sum) threads. SMT is disabled."
+    Write-Log-and-timestamp "Detected $($NumberOfCores.Sum) cores and $($NumberOfLogicalProcessors.Sum) threads. SMT is disabled."
     $smt_enabled=$false
 }
 else
 {
-    Write-Log "!!! ============================================= !!!"
-    Write-Log "!!! ERROR detected $NumberOfCores cores and $NumberOfLogicalProcessors threads. !!!"
-    Write-Log "!!! This script only supports 1 or 2 threads per core !!!"
-    Write-Log "!!! ============================================= !!!"
+    Write-Log-and-timestamp "!!! ============================================= !!!"
+    Write-Log-and-timestamp "!!! ERROR detected $NumberOfCores cores and $NumberOfLogicalProcessors threads. !!!"
+    Write-Log-and-timestamp "!!! This script only supports 1 or 2 threads per core !!!"
+    Write-Log-and-timestamp "!!! ============================================= !!!"
     $fatal_error=$true
 }
 
@@ -285,37 +285,36 @@ if ($last_core -ge $NumberOfCores.Sum)
 
 if ((Get-Process -Name Prime95 -ErrorAction SilentlyContinue).Count -gt 0)
 {
-    Write-Log "!!! ============================================= !!!"
-    Write-Log "!!! ERROR Prime95 is already running              !!!"
-    Write-Log "!!! ============================================= !!!"
+    Write-Log-and-timestamp "!!! ============================================= !!!"
+    Write-Log-and-timestamp "!!! ERROR Prime95 is already running              !!!"
+    Write-Log-and-timestamp "!!! ============================================= !!!"
     $fatal_error=$true
 }
 
 if (($fatal_error -eq $false) -and ($core_loop_test -eq $true))
 {
     $test="core_loop_test"
-	Write-Log "#####################################################"
-    Write-Log "Starting looping test on cores $first_core through $last_core."
-    Clean-p95-Results ($test)
-    Write-Log "Looping $loops times around all cores."
+	Write-Log-and-timestamp "#####################################################"
+    Write-Log-and-timestamp "Starting looping test on cores $first_core through $last_core."
+    OldRunScrubber ($test)
+    Write-Log-and-timestamp "Looping $loops times around all cores."
     $first_run=1
     for ($i=1; $i -le $loops; $i++)
     {
-		Write-Log "*****************************************************"
-        Write-Log "Starting pass $i out of $loops."
-		Write-Log "*****************************************************"
+		Write-Log-and-timestamp "*****************************************************"
+        Write-Log-and-timestamp "Starting pass $i out of $loops."
+		Write-Log-and-timestamp "*****************************************************"
         for ($core=$first_core; $core -le $last_core; $core++)
         {
             # Skip testing if this core already failied in an earlier loop
             if (Test-Path "$work_dir\core_failures\*.core${core}_loop*_failure_$filedatetime.log")
             {
-                Write-Log "!!! ============================================= !!!"
-                Write-Log "!!! Skipping core ${core} due to previous failure.      !!!"
-                Write-Log "!!! ============================================= !!!"
+                Write-Log-and-timestamp "!!! ============================================= !!!"
+                Write-Log-and-timestamp "!!! Skipping core ${core} due to previous failure.      !!!"
+                Write-Log-and-timestamp "!!! ============================================= !!!"
             }
             else
             {
-                $timer=0
                 $p95result=""
                 if ($first_run -eq 1) # Do not cool down before the first test
                 {
@@ -323,13 +322,13 @@ if (($fatal_error -eq $false) -and ($core_loop_test -eq $true))
                 }
                 elseif($cooldown -gt 0)
                 {
-                    Write-Log "Cooling down for $cooldown seconds."
+                    Write-Log-and-timestamp "Cooling down for $cooldown seconds."
                     Start-Sleep -Seconds $cooldown
                 }
-                Write-Log "Starting $cycle_time second torture test on core $core."
+                Write-Log-and-timestamp "Starting $cycle_time second torture test on core $core."
                 # Start stress test
                 Start-Process -FilePath "$work_dir\p95\Prime95.exe" -ArgumentList "-T" -WindowStyle Minimized
-                $process=Set-Affinity -CPUCore $core -ProcessName "Prime95"
+                $process=SetAffinity -CPUCore $core -ProcessName "Prime95"
                 Wait-Prime95 -CPUCore $core -WaitTime $cycle_time -Loop $i
                 Exit-Process -Process $process -ProcessName "Prime95"
             }
@@ -344,15 +343,15 @@ if (($fatal_error -eq $false) -and ($core_jumping_test -eq $true))
     $cycle_time=$core_jumping_cycle_time
     [int]$prev_core=-1
     [int]$core=-1
-	Write-Log "#####################################################"
-    Write-Log "Starting core jumping test on cores $first_core through $last_core."
-	Write-Log "#####################################################"
-    Clean-p95-Results ($test)
+	Write-Log-and-timestamp "#####################################################"
+    Write-Log-and-timestamp "Starting core jumping test on cores $first_core through $last_core."
+	Write-Log-and-timestamp "#####################################################"
+    OldRunScrubber ($test)
     for ($i=1; $i -le $loops; $i++)
     {
-		Write-Log "*****************************************************"
-        Write-Log "Starting pass $i out of $loops."
-		Write-Log "*****************************************************"
+		Write-Log-and-timestamp "*****************************************************"
+        Write-Log-and-timestamp "Starting pass $i out of $loops."
+		Write-Log-and-timestamp "*****************************************************"
         for ($j=$first_core; $j -le $last_core; $j++)
         {
             # randomly pick a new core to start or move to
@@ -360,45 +359,44 @@ if (($fatal_error -eq $false) -and ($core_jumping_test -eq $true))
             # skip testing if this core already failied in an earlier loop
             if (Test-Path "$work_dir\core_failures\*.core${core}_loop*_failure_$filedatetime.log")
             {
-                Write-Log "!!! ============================================= !!!"
-                Write-Log "!!! Skipping core ${core} due to previous failure.      !!!"
-                Write-Log "!!! ============================================= !!!"
+                Write-Log-and-timestamp "!!! ============================================= !!!"
+                Write-Log-and-timestamp "!!! Skipping core ${core} due to previous failure.      !!!"
+                Write-Log-and-timestamp "!!! ============================================= !!!"
             }
             else
             {
-                $timer=0
                 $p95result=""
-                Write-Log "Starting $cycle_time second torture test on core $core"
+                Write-Log-and-timestamp "Starting $cycle_time second torture test on core $core"
                 # Start or re-start stress test
                 if ((Get-Process -Name Prime95 -ErrorAction SilentlyContinue).Count -eq 0)
                 {
                     Start-Process -FilePath "$work_dir\p95\Prime95.exe" -ArgumentList "-T" -WindowStyle Minimized
                 }
-                $process=Set-Affinity -CPUCore $core -ProcessName "Prime95"
+                $process=SetAffinity -CPUCore $core -ProcessName "Prime95"
                 Start-Sleep -Milliseconds 100
                 $p95result=if (Test-Path "$work_dir\p95\results.txt") {Select-String "$work_dir\p95\results.txt" -Pattern ERROR}
                 if ($p95result)
                 {
                     if ($prev_core -gt -1)
                     {
-                        Write-Log "!!! ============================================= !!!"
-                        Write-Log "!!! Warning! Test failed within 100 ms.           !!!"
-						Write-Log "!!! Previous core $prev_core might not be stable          !!!"
-                        Write-Log "!!! ============================================= !!!"
+                        Write-Log-and-timestamp "!!! ============================================= !!!"
+                        Write-Log-and-timestamp "!!! Warning! Test failed within 100 ms.           !!!"
+						Write-Log-and-timestamp "!!! Previous core $prev_core might not be stable          !!!"
+                        Write-Log-and-timestamp "!!! ============================================= !!!"
                     }
-                    p95-Error -p95result $p95result.Line -process $process -CPUCore $core -Loop $i
+                    p95Error -p95result $p95result.Line -process $process -CPUCore $core -Loop $i
                     Exit-Process -Process $process -ProcessName "Prime95"
                 }
                 elseif ($process.HasExited -ne $false)
                 {
                     if ($prev_core -gt -1)
                     {
-                        Write-Log "!!! ============================================= !!!"
-                        Write-Log "!!! Warning! Test failed within 100 ms.           !!!"
-						Write-Log "!!! Previous core $prev_core might not be stable          !!!"
-                        Write-Log "!!! ============================================= !!!"
+                        Write-Log-and-timestamp "!!! ============================================= !!!"
+                        Write-Log-and-timestamp "!!! Warning! Test failed within 100 ms.           !!!"
+						Write-Log-and-timestamp "!!! Previous core $prev_core might not be stable          !!!"
+                        Write-Log-and-timestamp "!!! ============================================= !!!"
                     }
-                    p95-Error -p95result $p95result.Line -process $process -CPUCore $core -Loop $i
+                    p95Error -p95result $p95result.Line -process $process -CPUCore $core -Loop $i
                 }
                 else
                 {
@@ -412,19 +410,19 @@ if (($fatal_error -eq $false) -and ($core_jumping_test -eq $true))
 
 if ($fatal_error -eq $true)
 {
-    Write-Log "!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!"
-    Write-Log "Script encountered an error. Resolve and retry."
+    Write-Log-and-timestamp "!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!"
+    Write-Log-and-timestamp "Script encountered an error. Resolve and retry."
 }
 else
 {
-	$env:core_failure = $env:core_failure | sort # not 100% working, array issue?
-    Write-Log "!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!"
-    Write-Log "Testing complete."
-	if($env:core_failure.Count -gt 0)
+	$env:core_failures = $env:core_failure | Sort-Object
+    Write-Log-and-timestamp "!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!"
+    Write-Log-and-timestamp "Testing complete."
+	if($env:core_failures.Count -gt 0)
 	{
-		Write-Log "The following cores are NOT stable."
-		Write-Log $env:core_failure
+		Write-Log-and-timestamp "The following cores are NOT stable."
+		Write-Log-and-timestamp $env:core_failures
 	}
-    Write-Log "Console output is stored at $work_dir\logs\$log_file."
+    Write-Log-and-timestamp "Console output is stored at $work_dir\logs\$log_file."
 }
 Wait-Event
