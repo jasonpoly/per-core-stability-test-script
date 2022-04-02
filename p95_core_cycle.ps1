@@ -115,7 +115,7 @@ function Set-Affinity
     while ( ($runtime -lt $time_out) -and (Get-Process -Name $ProcessName -ErrorAction SilentlyContinue).Count -eq 0 )
     {        
         Start-Sleep -Milliseconds 100
-        $runtime = (NEW-TIMESPAN –Start $starttime –End (GET-DATE)).TotalSeconds
+        $runtime = (NEW-TIMESPAN -Start $starttime -End (GET-DATE)).TotalSeconds
     }
 
     if ($runtime -ge $time_out)
@@ -215,7 +215,7 @@ function Wait-prime95
     {
         Start-Sleep -Seconds $timestep
         $p95result = if (Test-Path "$work_dir\p95\results.txt") {Select-String "$work_dir\p95\results.txt" -Pattern ERROR}
-        $runtime = (NEW-TIMESPAN –Start $starttime –End (GET-DATE)).TotalSeconds
+        $runtime = (NEW-TIMESPAN -Start $starttime -End (GET-DATE)).TotalSeconds
     }
 
     if ($p95result)
