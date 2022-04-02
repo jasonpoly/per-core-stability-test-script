@@ -25,12 +25,12 @@
 # Will extract, configure and run a single thread on prime 95,
 # using $process.ProcessorAffinity to assign to each cpu core for the specified time
 
-$p95path="p95v303b6.win64.zip"; # path to p95 .zip you want to extract and use
+$p95path="p95v307b9.win64.zip"; # path to p95 .zip you want to extract and use
 
 # adjust the following to customize length of time to run
 $core_loop_test=$true;    # Default=$true.  Basic test to loop around all cores.  Set to $falue to disable. 
 $loops=3;                 # Default=3. Number of times to loop around all cores.
-$cycle_time=180;          # Default=180.  Approx time in s to run on each core.  
+$cycle_time=10;          # Default=180.  Approx time in s to run on each core.  
 $cooldown=15;             # Default=15.  Time in s to cool down between testing each core.  
 
 $core_jumping_test=$true;      # Default=$true.  Test to move process from core to core.  Set to $falue to disable.
@@ -169,7 +169,7 @@ function p95-Error
         if ($stop_on_error) 
         { 
             $process.CloseMainWindow()
-            $process.Close()
+            Stop-Process -InputObject $process
             Wait-Event 
         }
     } 
@@ -192,7 +192,7 @@ function p95-Error
         if ($stop_on_error) 
         { 
             $process.CloseMainWindow()
-            $process.Close()
+            Stop-Process -InputObject $process
             Wait-Event 
         }
     }
@@ -242,13 +242,10 @@ function Exit-Process
 
     if ( ($Process -ne 0) -and ($Process.HasExited -eq $false) )
     {
-        if ($Process.CloseMainWindow() -eq $fales)
-        {
-            $Process.Kill()
-        }
         Write-Log "Waiting for $ProcessName to close"
+        $Process.CloseMainWindow()
+        Stop-Process -InputObject $process
         Wait-Process -Id $Process.Id -ErrorAction SilentlyContinue
-        $Process.Close()
     }
 }
 

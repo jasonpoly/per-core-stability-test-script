@@ -12,9 +12,12 @@ WARNING: Do not use if you have never run Prime95
 WARNING: Check for safe temperature and voltage on each core
 WARNING: After completing your testing, check that prime95 is not still running in the background
 
-Download p95v303b6.win64.zip from https://www.mersenne.org/download/ and place into this folder
+Download p95v307b9.win64.zip from https://www.mersenne.org/download/ and place into this folder
 
 [Optional] Open p95_core_cycle.ps1 in a text editor and edit the top few lines in case you want to change anything from the defaults:
+
+# Edit filename to use a different version of p95
+$p95path="p95v307b9.win64.zip"; # path to p95 .zip you want to extract and use
 
 # adjust the following to customize length of time to run
 $loops=3;               # Default=3. Number of times to loop arount all cores.
