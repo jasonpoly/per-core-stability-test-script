@@ -30,7 +30,7 @@ $p95path="p95v307b9.win64.zip"; # path to p95 .zip you want to extract and use
 # adjust the following to customize length of time to run
 $core_loop_test=$true;    # Default=$true.  Basic test to loop around all cores.  Set to $falue to disable. 
 $loops=3;                 # Default=3. Number of times to loop around all cores.
-$cycle_time=10;          # Default=180.  Approx time in s to run on each core.  
+$cycle_time=180;          # Default=180.  Approx time in s to run on each core.  
 $cooldown=15;             # Default=15.  Time in s to cool down between testing each core.  
 
 $core_jumping_test=$true;      # Default=$true.  Test to move process from core to core.  Set to $falue to disable.
@@ -168,9 +168,8 @@ function p95-Error
         mv "$work_dir\p95\results.txt" "$work_dir\${test}.core${CPUCore}_loop${Loop}_failure.txt"
         if ($stop_on_error) 
         { 
-            $process.CloseMainWindow()
             Stop-Process -InputObject $process
-            Wait-Event 
+            Wait-Process -Id $Process.Id -ErrorAction SilentlyContinue
         }
     } 
     elseif ($process.HasExited -ne $false)
@@ -191,9 +190,8 @@ function p95-Error
         }
         if ($stop_on_error) 
         { 
-            $process.CloseMainWindow()
             Stop-Process -InputObject $process
-            Wait-Event 
+            Wait-Process -Id $Process.Id -ErrorAction SilentlyContinue
         }
     }
 }
@@ -243,7 +241,6 @@ function Exit-Process
     if ( ($Process -ne 0) -and ($Process.HasExited -eq $false) )
     {
         Write-Log "Waiting for $ProcessName to close"
-        $Process.CloseMainWindow()
         Stop-Process -InputObject $process
         Wait-Process -Id $Process.Id -ErrorAction SilentlyContinue
     }
